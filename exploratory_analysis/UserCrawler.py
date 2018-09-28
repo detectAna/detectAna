@@ -24,12 +24,15 @@ class UserCrawler:
 
             if DEBUG:
                 print("Tweets for {}".format(user['screen_name']))
-                print(tweets)
-
+                print(tweets[0], "\n\n")
+                print(tweets[0].keys())
+            tweets = list(map(lambda tweet: {'text': tweet['text'], 'created_at': tweet['created_at'], 'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
             user['tweets'] = tweets
+
 
         with open('reuslts_with_tweets.json', 'w') as f:
             print("Dumping data to file")
+
             json.dump(self.users, f)
 
 usercrawler = UserCrawler()
