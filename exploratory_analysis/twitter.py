@@ -9,9 +9,7 @@ user_key = "988796600746033152-X5EUzf6jHnFFwf8XncZ3Ti0fQBfHdA8"
 user_sec = "a2vYkRKN6V7hXWVjN8upbD5TqU1ypZx2ejLPhdvjwTThA"
 
 api = Twython(app_key, app_sec, user_key, user_sec)
-
 api.verify_credentials()
-
 
 verified_users = [
     'ughliest',
@@ -52,7 +50,6 @@ def filter_text(text):
     return reduce(lambda x, y: x or y, booleans)
 
 
-
 def get_possible_users():
     possible_users = []
 
@@ -61,7 +58,7 @@ def get_possible_users():
         possible_users.extend([r['user'] for r in results])
 
     filtered_users = list(filter(filter_text, possible_users))
-
+    print("Found {} users".format(len(filtered_users)))
     with open ('results.json', 'w') as f:
         json.dump(filtered_users, f)
 
