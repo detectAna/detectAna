@@ -31,18 +31,24 @@ class UserCrawler:
             print(user)
 
     def get_user_tweets(self):
+        flattened_tweets = []
         for counter, user in enumerate(self.users):
-            tweets = api.get_user_timeline(screen_name=user['screen_name'], count=self.num_tweets_to_crawl)
+            screen_name = user['screen_name']
+            tweets = api.get_user_timeline(screen_name=screen_name, count=self.num_tweets_to_crawl)
 
             if DEBUG:
                 print("Scraping last {} tweets for {}".format(self.num_tweets_to_crawl, user['screen_name']))
 
-            tweets = list(map(lambda tweet: {'text': tweet['text'], 'created_at': tweet['created_at'], 'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
+            tweets = list(map(lambda tweet: {'screen_name': screen_name, 'text': tweet['text'], 'created_at': tweet['created_at'], 'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
             self.users[counter]['tweets'] = tweets
 
-        with open('results_with_tweets.json', 'w') as f:
-            print("Dumping data to file")
-            json.dump(self.users, f)
+            flattened_tweets.extend(tweets)
+        self.write_users_tofile('results_with_tweets.json')
+
+        with open('flattened.json', 'w') as f:
+            print("writing flattened")
+            json.dump(flattened_tweets, f)
+
 
     def get_users(self):
 
