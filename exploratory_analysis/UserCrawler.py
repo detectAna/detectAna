@@ -45,6 +45,8 @@ class UserCrawler:
             json.dump(self.users, f)
 
     def get_users(self):
+
+        # function to filter the users based off of their descriptions
         def filter_text(text):
             description = text['description'].lower()
             booleans = [keyword in description for keyword in self.recovery_keywords]
@@ -55,18 +57,18 @@ class UserCrawler:
         # Don't scrape a user more than once
         scraped_usernames = set()
         for hashtag in self.hashtags:
-            results = api.search(q="#{}".format(hashtag)).get('statuses')
+            results = api.search(q="#{}".format(hashtag), count=100).get('statuses')
 
             for r in results:
                 user = r['user']
                 if user['screen_name'] not in scraped_usernames:
                     scraped_usernames.add(user['screen_name'])
                     possible_users.append(user)
-
+        print("Found {} users BEFORE filtering".format(len(possible_users)))
         # Perform filtering based off of recovery_keywords
         filtered_users = list(filter(filter_text, possible_users))
 
-        print("Found {} users".format(len(filtered_users)))
+        print("Found {} users AFTER filtering".format(len(filtered_users)))
         self.users = filtered_users
         self.write_users_tofile()
         return self.users
