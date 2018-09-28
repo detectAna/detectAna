@@ -43,6 +43,8 @@ class UserCrawler:
             self.users[counter]['tweets'] = tweets
 
             flattened_tweets.extend(tweets)
+
+        ## TODO: CLEAN THE TWEETS HERE
         self.write_users_tofile('results_with_tweets.json')
 
         with open('flattened.json', 'w') as f:
