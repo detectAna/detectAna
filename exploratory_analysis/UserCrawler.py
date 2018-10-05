@@ -99,16 +99,19 @@ class UserCrawler:
     # users is an array of users that is read from 'results.json'
     def crawl_from_existing_users(self, users, lower_threshold=1000, higher_threshold=30000):
         # Sort the users by the number of "statuses", or "tweets" DESCENDING
-        sorted_users = sorted(users, key=lambda user: user['statuses_count'], reverse=True)
+        sorted_users = sorted(users, key=lambda user: user.statuses_count, reverse=True)
         # Filter based off of the thresholdp
-        sorted_users = list(filter(lambda user: user['statuses_count'] >= lower_threshold and user['statuses_count'] <= higher_threshold, sorted_users))
+        sorted_users = list(filter(lambda user: user.statuses_count >= lower_threshold and user.statuses_count <= higher_threshold, sorted_users))
+        print(len(sorted_users))
         for user in sorted_users:
-            screen_name = user['screen_name']
+            screen_name = user.screen_name
             followers_ids = api.followers_ids(screen_name=screen_name)
             following_ids = api.friends_ids(screen_name=screen_name)
 
             followers_count = len(followers_ids)
             following_count = len(following_ids)
+
+            print(screen_name, followers_count, following_count)
             ## Filter out the followers and following
             # followers = list(filter(self.filter_users_by_keywords, followers))
             # following = list(filter(self.filter_users_by_keywords, following))
@@ -119,8 +122,7 @@ class UserCrawler:
     def write_users_tofile(self, filename='results.json'):
         jsons = []
         for user in self.users:
-            jsons.append(jsonobj)
+            jsons.append(user._json)
 
-        print(jsons)
         with open (filename, 'w') as f:
             json.dump(jsons, f)
