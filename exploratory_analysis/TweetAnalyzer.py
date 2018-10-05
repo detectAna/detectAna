@@ -45,6 +45,57 @@ class TweetAnalyzer:
 
 
 ta = TweetAnalyzer()
-ta.plot()
+# ta.plot()
 # ta.get_sentiments()
+
+# best_threshold = -1
+# best_accuracy = -1
+# best_index = -1
+
+# for index, result in enumerate(results):
+
+# # 	df, features, threshold = result['df'], result['features'], result['threshold']
+#     features, threshold = result['features'], result['threshold']
+
+
+# 	print('Fitting for threshold = {}'.format(threshold))
+
+# 	# K-fold construction
+# 	folds = 10
+# 	kf = model_selection.KFold(n_splits=folds, shuffle=True)
+
+# 	# K-fold cross validation and performance evaluation
+# 	foldid = 0
+# 	totacc = 0.
+# 	ytlog = []
+# 	yplog = []
+
+# 	for train_index, test_index in kf.split(df.airline_sentiment):
+# 		foldid += 1
+# 		print("Starting Fold %d" % foldid)
+# 		print("\tTRAIN:", len(train_index), "TEST:", len(test_index))
+# 		X_train, X_test = features[train_index], features[test_index]
+# 		y_train, y_test = df.airline_sentiment[train_index], df.airline_sentiment[test_index]
+
+# 		clf.fit(X_train, y_train)
+# 		y_pred = clf.predict(X_test)
+
+# 		acc = accuracy_score(y_pred, y_test)
+# 		totacc += acc
+# 		ytlog += list(y_test)
+# 		yplog += list(y_pred)
+
+# 		print('\tAccuracy:', acc)
+
+#     print("Average Accuracy: %0.3f" % (totacc / folds,))
+
+# 	if (totacc / folds) > best_accuracy:
+# 		best_accuracy = totacc / folds
+# 		best_threshold = threshold
+# 		best_index = index
+
+# 	print(classification_report(ytlog, yplog, target_names=df.airline_sentiment))
+
+
+# print('\n\n The best accuracy was {} using a threshold of {}'.format(best_accuracy, best_threshold))
 
