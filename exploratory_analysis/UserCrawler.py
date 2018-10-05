@@ -52,7 +52,7 @@ class UserCrawler:
             json.dump(flattened_tweets, f)
 
     def filter_users_by_keywords(self, user):
-        description = user['description'].lower()
+        description = user.description.lower()
         booleans = [keyword in description for keyword in self.recovery_keywords]
         return reduce(lambda x, y: x or y, booleans)
 
@@ -78,13 +78,13 @@ class UserCrawler:
         # Don't scrape a user more than once
         scraped_usernames = set()
         for hashtag in self.hashtags:
-            results = api.search(q="#{}".format(hashtag), count=100).get('statuses')
-
+            results = api.search(q="#{}".format(hashtag), count=100)
             for r in results:
-                user = r['user']
-                if user['screen_name'] not in scraped_usernames:
-                    scraped_usernames.add(user['screen_name'])
+                user = r.user
+                if user.screen_name not in scraped_usernames:
+                    scraped_usernames.add(user.screen_name)
                     possible_users.append(user)
+
         print("Found {} users BEFORE filtering".format(len(possible_users)))
         # Perform filtering based off of recovery_keywords
         filtered_users = list(filter(self.filter_users_by_keywords, possible_users))
@@ -104,18 +104,23 @@ class UserCrawler:
         sorted_users = list(filter(lambda user: user['statuses_count'] >= lower_threshold and user['statuses_count'] <= higher_threshold, sorted_users))
         for user in sorted_users:
             screen_name = user['screen_name']
-            followers = api.get_followers_list(screen_name=screen_name, count=200)['users']
-            following = api.get_friends_list(screen_name=screen_name, count=200)['users']
+            followers_ids = api.followers_ids(screen_name=screen_name)
+            following_ids = api.friends_ids(screen_name=screen_name)
 
-            followers_count = len(followers)
-            following_count = len(following)
+            followers_count = len(followers_ids)
+            following_count = len(following_ids)
             ## Filter out the followers and following
-            followers = list(filter(self.filter_users_by_keywords, followers))
-            following = list(filter(self.filter_users_by_keywords, following))
+            # followers = list(filter(self.filter_users_by_keywords, followers))
+            # following = list(filter(self.filter_users_by_keywords, following))
 
-            print("filtered out {} followers", followers_count - len(followers))
-            print("filtered out {} friends", following_count - len(following))
+            # print("filtered out {} followers", followers_count - len(followers))
+            # print("filtered out {} friends", following_count - len(following))
 
     def write_users_tofile(self, filename='results.json'):
+        jsons = []
+        for user in self.users:
+            jsons.append(jsonobj)
+
+        print(jsons)
         with open (filename, 'w') as f:
-            json.dump(self.users, f)
+            json.dump(jsons, f)
