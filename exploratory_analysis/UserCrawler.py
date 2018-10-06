@@ -34,16 +34,17 @@ class UserCrawler:
         flattened_tweets = []
         for counter, user in enumerate(self.users):
             screen_name = user['screen_name']
-            tweets = api.get_user_timeline(screen_name=screen_name, count=self.num_tweets_to_crawl)
+            tweets = api.get_user_timeline(screen_name=screen_name, count=self.num_tweets_to_crawl, tweet_mode="extended")
 
             if DEBUG:
                 print("Scraping last {} tweets for {}".format(self.num_tweets_to_crawl, user['screen_name']))
 
-            tweets = list(map(lambda tweet: {'screen_name': screen_name, 'text': tweet['text'], 'created_at': tweet['created_at'], 'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
+            tweets = list(map(lambda tweet: {'screen_name': screen_name, 'text': tweet['full_text'], 'created_at': tweet['created_at'], 'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
             self.users[counter]['tweets'] = tweets
-
+            print(tweet['full_text'])
             flattened_tweets.extend(tweets)
 
+        return
         ## TODO: CLEAN THE TWEETS HERE
         self.write_users_tofile('results_with_tweets.json')
 
@@ -52,8 +53,15 @@ class UserCrawler:
             json.dump(flattened_tweets, f)
 
     def filter_users_by_keywords(self, user):
+        if (type(user) is int):
+            try :
+                user = api.get_user(user)
+            except :
+                return False
+
         description = user.description.lower()
         booleans = [keyword in description for keyword in self.recovery_keywords]
+        print(user.screen_name, reduce(lambda x, y: x or y, booleans))
         return reduce(lambda x, y: x or y, booleans)
 
     def get_initial_users(self, read_from_file=False):
@@ -78,7 +86,7 @@ class UserCrawler:
         # Don't scrape a user more than once
         scraped_usernames = set()
         for hashtag in self.hashtags:
-            results = api.search(q="#{}".format(hashtag), count=100)
+            results = api.search(q="#{}".format(hashtag), count=500)
             for r in results:
                 user = r.user
                 if user.screen_name not in scraped_usernames:
@@ -111,7 +119,11 @@ class UserCrawler:
             followers_count = len(followers_ids)
             following_count = len(following_ids)
 
-            print(screen_name, followers_count, following_count)
+            print('User : ', screen_name, 'Followers : ', followers_count, 'Following :', following_count)
+            print('Before filtering followers : ', len(followers_ids))
+            followers = list(filter(self.filter_users_by_keywords, followers_ids))
+            print('After filtering followers : ', len(followers))
+            break;
             ## Filter out the followers and following
             # followers = list(filter(self.filter_users_by_keywords, followers))
             # following = list(filter(self.filter_users_by_keywords, following))
