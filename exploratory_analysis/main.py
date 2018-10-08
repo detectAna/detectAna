@@ -8,7 +8,7 @@ from TweetAnalyzer import TweetAnalyzer
 usercrawler = UserCrawler()
 
 # get the users
-initial_users = usercrawler.get_initial_users(read_from_file=False)
+initial_users = usercrawler.get_initial_users(read_from_file=True)
 crawled_users = usercrawler.crawl_from_existing_users(initial_users)
 
 
