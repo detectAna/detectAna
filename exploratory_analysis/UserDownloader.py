@@ -58,7 +58,9 @@ class UserDownloader():
                 'lang' : info.lang,
                 'utc_offset' : info.utc_offset,
                 'time_zone' : info.time_zone,
-                'verified' : info.verified} ,
+                'verified' : info.verified,
+                'statuses_count' : info.statuses_count,
+                } ,
                 [user])
         )[0]
 
@@ -66,15 +68,12 @@ class UserDownloader():
 
     	#initialize a list to hold all the user Tweets
     	alltweets = []
-
     	#save the id of the oldest tweet less one
     	oldest = None
-
     	#keep grabbing tweets until there are no tweets left to grab
     	while True:
-
     		#all subsiquent requests use the max_id param to prevent duplicates
-    		new_tweets = api.user_timeline(id = user_id, count=200, max_id=oldest, tweet_mode="extended")
+    		new_tweets = api.user_timeline(id = user_id, count=1, max_id=oldest, tweet_mode="extended")
 
             if (len(new_tweets) == 0) :
                 break;
@@ -88,9 +87,13 @@ class UserDownloader():
         return list(
             map(
                 lambda tweet: {
-                'id' : info.id,
-                'screen_name' : info.screen_name,
-                'name' : info.name} ,
+                'id' : tweet.id,
+                'text' : tweet.full_text,
+                'truncated' : tweet.truncated,
+                'entities' : tweet.entities,
+                'extended_entities' : tweet.extended_entities,
+                'in_reply_to_status_id' : tweet.in_reply_to_status_id
+                } ,
                 alltweets)
         )
 

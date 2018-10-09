@@ -28,7 +28,7 @@ class UserCrawler:
             'survivor',
             'advocate'
         ]
-        self.users = { 'user_ids' : set(), 'crawled' : set(), 'downloaded_timeline' : set(), 'total_users' : 0}
+        self.users = { 'user_ids' : set(), 'crawled' : set(), 'total_users' : 0}
 
     #new_users of datatype set
     def add_update_db(self, new_users) :
@@ -38,15 +38,14 @@ class UserCrawler:
             write_obj = {
             'user_ids' : list(self.users['user_ids']),
             'crawled' : list(self.users['crawled']),
-            'total_users' : self.users['total_users'],
-            'downloaded_timeline' : list(self.users['downloaded_timeline'])
+            'total_users' : self.users['total_users']
             }
             json.dump(write_obj, user_file)
 
     def print_results(self):
         for user in self.users:
             print(user)
-
+            
     def get_user_tweets(self):
         flattened_tweets = []
         for counter, user in enumerate(self.users):
@@ -91,7 +90,6 @@ class UserCrawler:
                     self.users['user_ids'] = set(read_obj['user_ids'])
                     self.users['crawled'] = set(read_obj['crawled'])
                     self.users['total_users'] = read_obj['total_users']
-                    self.users['downloaded_timeline'] = set(read_obj['downloaded_timeline'])
                     return self.users
             except FileNotFoundError:
                 print("Can't find the tweets file")
@@ -156,11 +154,3 @@ class UserCrawler:
 
             # print("filtered out {} followers", followers_count - len(followers))
             # print("filtered out {} friends", following_count - len(following))
-
-    def write_users_tofile(self, filename='results.json'):
-        jsons = []
-        for user in self.users:
-            jsons.append(user._json)
-
-        with open (filename, 'w') as f:
-            json.dump(jsons, f)
