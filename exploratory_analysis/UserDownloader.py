@@ -4,6 +4,7 @@ from TwitterAPIManager import TwitterAPIPool
 USER_DOWNLOAD_STATUS_FILE = 'user_download_status.json'
 USER_INFO_FILE = 'user_metadata.jsonl'
 USER_TWEET_FILE = 'user_tweets.jsonl'
+DOWNLOAD_LIMIT = 1
 
 class UserDownloader():
 
@@ -65,48 +66,44 @@ class UserDownloader():
         )[0]
 
     def extract_tweets(self, user_id, api):
-
-    	#initialize a list to hold all the user Tweets
-    	alltweets = []
-    	#save the id of the oldest tweet less one
-    	oldest = None
-    	#keep grabbing tweets until there are no tweets left to grab
-    	while True:
-    		#all subsiquent requests use the max_id param to prevent duplicates
-    		new_tweets = api.user_timeline(id = user_id, count=1, max_id=oldest, tweet_mode="extended")
-
-            if (len(new_tweets) == 0) :
+        #initialize a list to hold all the user Tweets
+        alltweets = []
+        #save the id of the oldest tweet less one
+        oldest = None
+        #keep grabbing tweets until there are no tweets left to grab
+        while True:
+            #all subsiquent requests use the max_id param to prevent duplicates
+            new_tweets = api.user_timeline(id = user_id, count=1, max_id=oldest, tweet_mode="extended")
+            if (len(new_tweets) == 0):
                 break;
 
-    		#save most recent tweets
-    		alltweets.extend(new_tweets)
+            #save most recent tweets
+            alltweets.extend(new_tweets)
+            #update the id of the oldest tweet less one
+            oldest = alltweets[-1].id - 1
+        return list(map(
+            lambda tweet: {'id' : tweet.id,
+                                       'text' :  tweet.full_text,
+                                       'truncated' : tweet.truncated,
+                                       'entities' : tweet.entities,
+                                       'extended_entities' : tweet.extended_entities,
+                                       'in_reply_to_status_id' : tweet.in_reply_to_status_id,
+                                       'in_reply_to_user_id' : tweet.in_reply_to_user_id,
+                                       'tweeter_id': tweet.user.id,
+                                       'tweeter_screen_name' : tweet.user.screen_name } ,alltweets))
 
-    		#update the id of the oldest tweet less one
-    		oldest = alltweets[-1].id - 1
-
-        return list(
-            map(
-                lambda tweet: {
-                'id' : tweet.id,
-                'text' : tweet.full_text,
-                'truncated' : tweet.truncated,
-                'entities' : tweet.entities,
-                'extended_entities' : tweet.extended_entities,
-                'in_reply_to_status_id' : tweet.in_reply_to_status_id
-                } ,
-                alltweets)
-        )
-
-    def runner():
+    def runner(self):
 
         for user_id in user_ids:
 
             if user_id in self.users_downloaded['users_downloaded']:
                 continue;
 
+            if DOWNLOAD_LIMIT <= self.users_downloaded['total']:
+                break
+
             user_info = self.extract_user_info(user_id, api)
 
             user_tweets = self.extract_tweets(user_id, api)
-
             self.save_user_downloaded(user_info, user_tweets)
             self.add_user_status(user_id)
