@@ -9,7 +9,7 @@ class API :
     def __init__(self, key):
         auth = tweepy.OAuthHandler(key["app_key"], key["app_sec"])
         auth.set_access_token(key["user_key"], key["user_sec"])
-        self.api = tweepy.API(auth, retry_count = 3, retry_delay = 5, timeout=5, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+        self.api = tweepy.API(auth, retry_count = 3, retry_delay = 5*60, timeout=15*60, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
         self.name = key["name"]
 
 class TwitterAPIPool:
@@ -28,7 +28,7 @@ class TwitterAPIPool:
         rate_limit_status = app.api.rate_limit_status()['resources'][self.category][self.sub_category]
         priority_remaining_requests = -1* rate_limit_status['remaining']
         priority_reset_time = rate_limit_status['reset']
-        print(app.name, pos, priority_remaining_requests, priority_reset_time)
+        #print(app.name, pos, priority_remaining_requests, priority_reset_time)
         heappush(self.app_creds, (priority_remaining_requests, priority_reset_time , pos, app))
 
     def get_api(self):
