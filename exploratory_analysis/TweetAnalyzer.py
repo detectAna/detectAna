@@ -4,48 +4,74 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+import jsonlines
+from TweetCleaner import TweetCleaner
+from timeit import default_timer as timer
+
+TWEETS_FILE = 'user_tweets.jsonl'
+DEBUG = True
+
 
 class TweetAnalyzer:
 
     def __init__(self, tweets=None):
         if not tweets:
             try:
-                with open('flattened.json') as f:
-                    self.tweets = json.load(f)
+                with jsonlines.open(TWEETS_FILE) as reader:
+                    self.tweets = [tweet for tweet in reader]
+                    print('Loaded {} tweets fron {}'.format(
+                        len(self.tweets), TWEETS_FILE))
             except FileNotFoundError:
                 print("Can't find the tweets file")
+            except Exception as e:
+                print(e)
         else:
             self.tweets = tweets
-
-        columns = ["screen_name", "text", "created_at", "retweet_count", "favorite_count", "favorited"]
+        # Extract the keys from the first tweet and spread them into a list
+        columns = [*self.tweets[0]]
         self.df = pd.DataFrame(self.tweets, columns=columns)
+        self.clean_tweets()
+        if DEBUG:
+            print(self.df.head())
 
-    def plot(self):
+    def clean_tweets(self):
+        start = timer()
+        self.df.text = self.df.text.apply(TweetCleaner.strip_links)
+        self.df.text = self.df.text.apply(TweetCleaner.strip_mentions)
+        self.df.text = self.df.text.apply(TweetCleaner.strip_hashtags)
+        self.df.text = self.df.text.apply(TweetCleaner.strip_rt)
+        self.df.text = self.df.text.apply(
+            TweetCleaner.remove_special_characters)
+        end = timer()
+        print('Cleaned tweets in {}'.format(end - start))
+
+    def plot(self, top=100):
         vectorizer = TfidfVectorizer(stop_words='english')
         tfidf_result = vectorizer.fit_transform(self.df['text'])
 
         scores = zip(vectorizer.get_feature_names(),
-        np.asarray(tfidf_result.sum(axis=0)).ravel())
+                     np.asarray(tfidf_result.sum(axis=0)).ravel())
 
         sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)
 
         labels, scores = [], []
-        for item in sorted_scores[:100]:
+
+        # Get the scores and labels of the top 100 tweets
+        for item in sorted_scores[:top]:
             print("{0:50} Score: {1}".format(item[0], item[1]))
             # sns.distplot(item[1], label=item[0])
             labels.append(item[0])
             scores.append(item[1])
 
-        y_pos = np.arange(len(scores))
+        # y_pos = np.arange(len(scores))
 
-        plt.bar(np.arange(max(scores)), scores, color="blue")
-        plt.xticks(y_pos, labels)
-        plt.show()
-
+        # plt.bar(np.arange(max(scores)), scores, color="blue")
+        # plt.xticks(y_pos, labels)
+        # plt.show()
 
 
 ta = TweetAnalyzer()
-# ta.plot()
+ta.plot()
 # ta.get_sentiments()
 
 # best_threshold = -1
@@ -98,4 +124,3 @@ ta = TweetAnalyzer()
 
 
 # print('\n\n The best accuracy was {} using a threshold of {}'.format(best_accuracy, best_threshold))
-
