@@ -9,7 +9,7 @@ class API :
     def __init__(self, key):
         auth = tweepy.OAuthHandler(key["app_key"], key["app_sec"])
         auth.set_access_token(key["user_key"], key["user_sec"])
-        self.api = tweepy.API(auth, retry_count = 3, retry_delay = 5*60, timeout=15*60, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
+        self.api = tweepy.API(auth, retry_count = 3, retry_delay = 10, timeout=10, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
         self.name = key["name"]
 
 class TwitterAPIPool:
