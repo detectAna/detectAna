@@ -1,5 +1,6 @@
 import json
 from TwitterAPIManager import TwitterAPIPool
+import tweepy
 
 USER_INFO_DOWNLOAD_STATUS_FILE = 'user_info_download_status.json'
 USER_TWEETS_DOWNLOAD_STATUS_FILE = 'user_tweets_download_status.json'
@@ -50,9 +51,14 @@ class UserDownloader():
             for each_tweet in user_tweets:
                 user_tweet_file.write(json.dumps(each_tweet, default=str)+'\n')
 
-    def extract_user_info(self, user_id, api):
-        user = api.get_user(user_id)
-        # return the meta data of user
+    def extract_user_info(self,user_id, api):
+        try :
+            user = api.get_user(user_id)
+        except tweepy.TweepError:
+            self.add_user_status(user_id)
+            print("Failed to run the command on user, Skipping...", user_id)
+            return None
+        #return the meta data of user
         return list(
             map(
                 lambda info: {
@@ -83,9 +89,14 @@ class UserDownloader():
         oldest = None
         # keep grabbing tweets until there are no tweets left to grab
         while True:
-            # all subsiquent requests use the max_id param to prevent duplicates
-            new_tweets = api.user_timeline(
-                id=user_id, count=200, max_id=oldest, tweet_mode="extended")
+            #all subsiquent requests use the max_id param to prevent duplicates
+            try :
+                new_tweets = api.user_timeline(id = user_id, count=200, max_id=oldest, tweet_mode="extended")
+            except tweepy.TweepError:
+                self.add_user_status(user_id)
+                print("Failed to run the command on user, Skipping...", user_id)
+                return []
+
             if (len(new_tweets) == 0):
                 break
 
@@ -126,9 +137,10 @@ class UserDownloader():
 
             if (self.mode == 'info'):
                 user = self.download_info(user_id)
-                print('Downloaded user info ', user['screen_name'])
-            else:
+                if user is not None:
+                    print('Downloaded user info ', user['screen_name'])
+            else :
                 user_tweets = self.download_tweets(user_id)
-                print('Downloaded user ', user_id,
-                      ' ', len(user_tweets), ' tweets')
+                if user_tweets is not None:
+                    print('Downloaded user ', user_id,' ', len(user_tweets) ,' tweets')
             self.add_user_status(user_id)
