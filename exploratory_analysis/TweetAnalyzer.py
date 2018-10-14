@@ -1,52 +1,176 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import NMF, LatentDirichletAllocation, TruncatedSVD
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 import json
+import jsonlines
+from TweetPreprocessor import TweetPreprocessor
+from timeit import default_timer as timer
+
+
+
+TWEETS_FILE = 'user_tweets.jsonl'
+DEBUG = True
+#Building features from raw data
+with gzip.open(‘gamergate.json.gz’,‘rb’) as f:
+   count = 0
+   for line in f:
+       status = json.loads(line)
+       #pprint.pprint(status)
+       raw_series = pd.Series({‘followers_count’:status[‘user’][‘followers_count’], ‘listed_count’:status[‘user’][‘listed_count’], \
+                        ‘statuses_count’:status[‘user’][‘statuses_count’],‘friends_count’:status[‘user’][‘friends_count’],\
+                       ‘favourites_count’:status[‘user’][‘favourites_count’],‘text’:status[‘text’].encode(‘utf-8’),‘retweet_count’:status[‘retweet_count’],‘user_name’:status[‘user’][‘name’]})
+       raw_features = pd.DataFrame([raw_series],index =[count])
+       if count == 0:
+           raw_features.to_csv(‘features.csv’)
+       if count > 0:
+           raw_features.to_csv(‘features.csv’, mode=‘a’, header=False)
+       count += 1
+       if count % 10000 == 0:
+           print(count)
+
 
 class TweetAnalyzer:
 
     def __init__(self, tweets=None):
         if not tweets:
             try:
-                with open('flattened.json') as f:
-                    self.tweets = json.load(f)
+                with jsonlines.open(TWEETS_FILE) as reader:
+                    self.tweets = [tweet for tweet in reader]
+                    print('Loaded {} tweets fron {}'.format(
+                        len(self.tweets), TWEETS_FILE))
             except FileNotFoundError:
                 print("Can't find the tweets file")
+            except Exception as e:
+                print(e)
         else:
             self.tweets = tweets
 
-        columns = ["screen_name", "text", "created_at", "retweet_count", "favorite_count", "favorited"]
+        # Extract the keys from the first tweet and spread them into a list
+        columns = [*self.tweets[0]]
+        self.tfidf_result = None
+        self.feature_names = None
         self.df = pd.DataFrame(self.tweets, columns=columns)
+        self.clean_tweets()
+        if DEBUG:
+            print(self.df.head())
 
-    def plot(self):
-        vectorizer = TfidfVectorizer(stop_words='english')
-        tfidf_result = vectorizer.fit_transform(self.df['text'])
+    def clean_tweets(self):
+        start = timer()
+        self.df.text = self.df.text.apply(TweetPreprocessor.strip_links)
+        self.df.text = self.df.text.apply(TweetPreprocessor.strip_mentions)
+        self.df.text = self.df.text.apply(TweetPreprocessor.strip_hashtags)
+        self.df.text = self.df.text.apply(TweetPreprocessor.strip_rt)
+        self.df.text = self.df.text.apply(
+            TweetPreprocessor.remove_special_characters)
+        end = timer()
+        print('Cleaned tweets in {}'.format(end - start))
 
-        scores = zip(vectorizer.get_feature_names(),
-        np.asarray(tfidf_result.sum(axis=0)).ravel())
+    def vectorize(self):
+        self.vectorizer = TfidfVectorizer(stop_words='english')
+        self.tfidf_result = self.vectorizer.fit_transform(self.df['text'])
+        self.feature_names = self.vectorizer.get_feature_names()
+
+    def top_n(self, top=100):
+        if self.feature_names is None or self.tfidf_result is None:
+            print('Must run vectorize() first before calling top_n')
+            return
+
+        scores = zip(self.feature_names,
+                     np.asarray(self.tfidf_result.sum(axis=0)).ravel())
 
         sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)
 
         labels, scores = [], []
-        for item in sorted_scores[:100]:
+
+        # Get the scores and labels of the top 100 tweets
+        for item in sorted_scores[:top]:
             print("{0:50} Score: {1}".format(item[0], item[1]))
             # sns.distplot(item[1], label=item[0])
             labels.append(item[0])
             scores.append(item[1])
 
-        y_pos = np.arange(len(scores))
+        index = np.arange(len(scores))
+        plt.bar(index, scores)
+        plt.xlabel('Word', fontsize=12)
+        plt.ylabel('TFIDF Score', fontsize=12)
+        plt.xticks(index, labels, fontsize=8, rotation=90)
+        plt.title('Top {} features'.format(top))
+        plt.savefig('Top_{}'.format(top))
 
-        plt.bar(np.arange(max(scores)), scores, color="blue")
-        plt.xticks(y_pos, labels)
-        plt.show()
+    def topic_model(self, num_topics=10):
+        if DEBUG:
+            print('Performing topic modeling with {} topics'.format(num_topics))
 
+        # Build a Latent Dirichlet Allocation Model
+        self.lda_model = LatentDirichletAllocation(n_topics=num_topics, max_iter=10, learning_method='online')
+        lda_Z = self.lda_model.fit_transform(self.tfidf_result)
+        print('LDA shape: ')
+        print(lda_Z.shape)  # (NO_DOCUMENTS, NO_TOPICS)
+
+        # Build a Non-Negative Matrix Factorization Model
+        self.nmf_model = NMF(n_components=num_topics)
+        nmf_Z = self.nmf_model.fit_transform(self.tfidf_result)
+        print('NMF shape: ')
+        print(nmf_Z.shape)  # (NO_DOCUMENTS, NO_TOPICS)
+
+        # Build a Latent Semantic Indexing Model
+        self.lsi_model = TruncatedSVD(n_components=num_topics)
+        lsi_Z = self.lsi_model.fit_transform(self.tfidf_result)
+        print('LSI shape: ')
+        print(lsi_Z.shape)  # (NO_DOCUMENTS, NO_TOPICS)
+
+        if DEBUG:
+            # Let's see how the first document in the corpus looks like in different topic spaces
+            print("LDA Model:")
+            self.print_topics(self.lda_model)
+            print("=" * 20)
+
+            print("NMF Model:")
+            self.print_topics(self.nmf_model)
+            print("=" * 20)
+
+            print("LSI Model:")
+            self.print_topics(self.lsi_model)
+            print("=" * 20)
+
+    # Helper function to print topics
+    def print_topics(self, model, top_n=10):
+        for idx, topic in enumerate(model.components_):
+            print("Topic %d:" % (idx))
+            print([(self.vectorizer.get_feature_names()[i], topic[i])
+                            for i in topic.argsort()[:-top_n - 1:-1]])
+
+    def plot_topic_model_SVD(self):
+        from bokeh.io import push_notebook, show, output_notebook
+        from bokeh.plotting import figure
+        from bokeh.models import ColumnDataSource, LabelSet
+        output_notebook()
+
+        self.svd = TruncatedSVD(n_components=2)
+        words_2d = self.svd.fit_transform(self.tfidf_result.T)
+
+        df = pd.DataFrame(columns=['x', 'y', 'word'])
+        df['x'], df['y'], df['word'] = words_2d[:,0], words_2d[:,1], self.feature_names
+
+        source = ColumnDataSource(ColumnDataSource.from_df(df))
+        labels = LabelSet(x="x", y="y", text="word", y_offset=8,
+                        text_font_size="8pt", text_color="#555555",
+                        source=source, text_align='center')
+
+        plot = figure(plot_width=600, plot_height=600)
+        plot.circle("x", "y", size=12, source=source, line_color="black", fill_alpha=0.8)
+        plot.add_layout(labels)
+        show(plot, notebook_handle=True)
 
 
 ta = TweetAnalyzer()
-# ta.plot()
-# ta.get_sentiments()
+ta.vectorize()
+# ta.top_n(100)
+ta.topic_model()
+ta.plot_topic_model_SVD()
 
 # best_threshold = -1
 # best_accuracy = -1
@@ -98,4 +222,3 @@ ta = TweetAnalyzer()
 
 
 # print('\n\n The best accuracy was {} using a threshold of {}'.format(best_accuracy, best_threshold))
-
