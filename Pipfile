@@ -16,6 +16,7 @@ jsonlines = "*"
 nltk = "*"
 gensim = "*"
 vadersentiment = "*"
+bokeh = "*"
 
 [requires]
 python_version = "3.6"
