@@ -2,10 +2,10 @@ import json
 from TwitterAPIManager import TwitterAPIPool
 import tweepy
 
-USER_INFO_DOWNLOAD_STATUS_FILE = 'user_info_download_status.json'
-USER_TWEETS_DOWNLOAD_STATUS_FILE = 'user_tweets_download_status.json'
-USER_INFO_FILE = 'user_metadata.jsonl'
-USER_TWEET_FILE = 'user_tweets.jsonl'
+USER_INFO_DOWNLOAD_STATUS_FILE = 'user_info_download_status_latest.json'
+USER_TWEETS_DOWNLOAD_STATUS_FILE = 'user_tweets_download_status_latest.json'
+USER_INFO_FILE = 'user_metadata_latest.jsonl'
+USER_TWEET_FILE = 'user_tweets_latest.jsonl'
 DOWNLOAD_LIMIT = 10000
 
 
@@ -53,7 +53,10 @@ class UserDownloader():
 
     def extract_user_info(self,user_id, api):
         try :
-            user = api.get_user(user_id)
+            if (type(user_id) == int ) :
+                user = api.get_user(id = user_id)
+            else :
+                user = api.get_user(screen_name = user_id)
         except tweepy.TweepError:
             self.add_user_status(user_id)
             print("Failed to run the command on user, Skipping...", user_id)
@@ -91,7 +94,10 @@ class UserDownloader():
         while True:
             #all subsiquent requests use the max_id param to prevent duplicates
             try :
-                new_tweets = api.user_timeline(id = user_id, count=200, max_id=oldest, tweet_mode="extended")
+                if (type(user_id) == int ) :
+                    new_tweets = api.user_timeline(id = user_id, count=200, max_id=oldest, tweet_mode="extended")
+                else :
+                    new_tweets = api.user_timeline(screen_name = user_id, count=200, max_id=oldest, tweet_mode="extended")
             except tweepy.TweepError:
                 self.add_user_status(user_id)
                 print("Failed to run the command on user, Skipping...", user_id)
@@ -117,7 +123,8 @@ class UserDownloader():
 
     def download_info(self, user_id):
         user_info = self.extract_user_info(user_id, self.api_pool.get_api())
-        self.save_user_info_downloaded(user_info)
+        if user_info is not None:
+            self.save_user_info_downloaded(user_info)
         return user_info
 
     def download_tweets(self, user_id):

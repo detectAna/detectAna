@@ -3,7 +3,7 @@ from functools import reduce
 from TwitterAuth import api
 
 DEBUG = True
-USER_FILE = 'users.json'
+USER_FILE = 'users_updated.json'
 TOTAL_REQUIRED_USERS = 100000
 
 
