@@ -1,67 +1,81 @@
 import json
 from functools import reduce
-from TwitterAuth import api
+from TwitterAPIManager import TwitterAPIPool
+import tweepy
 
 DEBUG = True
 USER_FILE = 'users.json'
-TOTAL_REQUIRED_USERS = 100000
+TOTAL_REQUIRED_USERS = 50
+
 
 class UserCrawler:
 
     def __init__(self, tweets_to_crawl_per_user=200):
         self.num_tweets_to_crawl = tweets_to_crawl_per_user
-        self.hashtags =[
+        self.hashtags = [
             'eatingdisorder',
+            'eatingdisorderrecovery',
             'eatingdisorders',
             'edproblems',
             'edrecovery',
             'edlogic',
             'anorexia',
+            'edwarrior',
             'thinspo',
             'anarecovery',
         ]
+        self.api_id_pool = TwitterAPIPool('users', '/users/show/:id')
+        self.api_followers_pool = TwitterAPIPool('followers', '/followers/ids')
+        self.api_friends_pool = TwitterAPIPool('friends', '/friends/ids')
 
         # Recovery keywords
         self.recovery_keywords = [
-            'recovery',
-            'recovered',
-            'survivor',
-            'advocate'
-        ]
-        self.users = { 'user_ids' : set(), 'crawled' : set(), 'total_users' : 0}
+            'recovering from anorexia',
+            'recovering anorexic',
+            'recovery for anorexia',
+            'recovery from anorexia',
+            'suffering from anorexia',
+            'battling anorexia',
 
-    #new_users of datatype set
-    def add_update_db(self, new_users) :
+        ]
+        self.users = {'user_ids': set(), 'crawled': set(), 'total_users': 0}
+
+    # new_users of datatype set
+    def add_update_db(self, new_users):
         self.users['user_ids'].update(new_users)
         self.users['total_users'] += len(new_users)
-        with open(USER_FILE, 'w') as user_file :
+        with open(USER_FILE, 'w') as user_file:
             write_obj = {
-            'user_ids' : list(self.users['user_ids']),
-            'crawled' : list(self.users['crawled']),
-            'total_users' : self.users['total_users']
+                'user_ids': list(self.users['user_ids']),
+                'crawled': list(self.users['crawled']),
+                'total_users': self.users['total_users']
             }
             json.dump(write_obj, user_file)
 
     def print_results(self):
         for user in self.users:
             print(user)
-            
+
     def get_user_tweets(self):
         flattened_tweets = []
         for counter, user in enumerate(self.users):
             screen_name = user['screen_name']
-            tweets = api.get_user_timeline(screen_name=screen_name, count=self.num_tweets_to_crawl, tweet_mode="extended")
+
+            tweets = api.get_user_timeline(
+                screen_name=screen_name, count=self.num_tweets_to_crawl, tweet_mode="extended")
 
             if DEBUG:
-                print("Scraping last {} tweets for {}".format(self.num_tweets_to_crawl, user['screen_name']))
+                print("Scraping last {} tweets for {}".format(
+                    self.num_tweets_to_crawl, user['screen_name']))
 
-            tweets = list(map(lambda tweet: {'screen_name': screen_name, 'text': tweet['full_text'], 'created_at': tweet['created_at'], 'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
+            tweets = list(map(lambda tweet: {'screen_name': screen_name, 'text': tweet['full_text'], 'created_at': tweet['created_at'],
+                                             'retweet_count': tweet['retweet_count'], 'favorite_count': tweet['favorite_count'], 'favorited': tweet['favorited']}, tweets))
             self.users[counter]['tweets'] = tweets
             print(tweet['full_text'])
             flattened_tweets.extend(tweets)
 
         return
-        ## TODO: CLEAN THE TWEETS HERE
+        # TODO: CLEAN THE TWEETS HERE
         self.write_users_tofile('results_with_tweets.json')
 
         with open('flattened.json', 'w') as f:
@@ -69,14 +83,19 @@ class UserCrawler:
             json.dump(flattened_tweets, f)
 
     def filter_users_by_keywords(self, user):
+        try :
+            api = self.api_id_pool.get_api()
+        except:
+            return False
         if (type(user) is int):
-            try :
+            try:
                 user = api.get_user(user)
-            except :
+            except:
                 return False
 
         description = user.description.lower()
-        booleans = [keyword in description for keyword in self.recovery_keywords]
+        booleans = [
+            keyword in description for keyword in self.recovery_keywords]
         #print(user.screen_name, reduce(lambda x, y: x or y, booleans))
         return reduce(lambda x, y: x or y, booleans)
 
@@ -104,11 +123,12 @@ class UserCrawler:
 
         print("Found {} users BEFORE filtering".format(len(scraped_userids)))
         # Perform filtering based off of recovery_keywords
-        filtered_users = set(filter(self.filter_users_by_keywords, scraped_userids))
+        filtered_users = set(
+            filter(self.filter_users_by_keywords, scraped_userids))
         print("Found {} users AFTER filtering".format(len(filtered_users)))
         print(filtered_users)
         self.add_update_db(filtered_users)
-        #self.write_users_tofile()
+        # self.write_users_tofile()
         return self.users
 
     # lower_threshold is the minimum amount of tweets that we want users to have
@@ -119,38 +139,39 @@ class UserCrawler:
         #sorted_users = sorted(users, key=lambda user: user.statuses_count, reverse=True)
         # Filter based off of the thresholdp
         #sorted_users = list(filter(lambda user: user.statuses_count >= lower_threshold and user.statuses_count <= higher_threshold, sorted_users))
-        #print(len(sorted_users))
+        # print(len(sorted_users))
 
         copy_set = users['user_ids'].copy()
         while True:
             for user_id in copy_set:
                 if (users['total_users'] >= crawl_limit):
-                    return;
+                    return
                 if (user_id in users['crawled']):
-                    continue;
-
-                followers_ids = api.followers_ids(id=user_id)
-                following_ids = api.friends_ids(id=user_id)
-
+                    continue
+                try :
+                    followers_ids = self.api_followers_pool.get_api().followers_ids(id=user_id)
+                    following_ids = self.api_friends_pool.get_api().friends_ids(id=user_id)
+                except tweepy.error.TweepError:
+                    print('Ignoring user id ', user_id)
+                    users['crawled'].add(user_id)
+                    continue
                 followers_count = len(followers_ids)
                 following_count = len(following_ids)
 
-                print('User : ', user_id, 'Followers : ', followers_count, 'Following :', following_count)
+                print('User : ', user_id, 'Followers : ',
+                      followers_count, 'Following :', following_count)
                 print('Before filtering followers : ', len(followers_ids))
-                followers = set(filter(self.filter_users_by_keywords, followers_ids))
-                following = set(filter(self.filter_users_by_keywords, following_ids))
+                followers = set(
+                    filter(self.filter_users_by_keywords, followers_ids ))
+                following = set(
+                    filter(self.filter_users_by_keywords, following_ids ))
                 print('After filtering followers : ', len(followers))
                 followers.update(following)
                 users['crawled'].add(user_id)
-                if len(followers) !=0 :
+                if len(followers) != 0:
                     self.add_update_db(followers)
             if (copy_set == users['user_ids']):
                 print('no more change in set')
-                break;
+                break
             copy_set = users['user_ids'].copy()
-            ## Filter out the followers and following
-            # followers = list(filter(self.filter_users_by_keywords, followers))
-            # following = list(filter(self.filter_users_by_keywords, following))
-
-            # print("filtered out {} followers", followers_count - len(followers))
-            # print("filtered out {} friends", following_count - len(following))
+        return users
