@@ -1,10 +1,11 @@
 import json
 from functools import reduce
-from TwitterAuth import api
+from TwitterAPIManager import TwitterAPIPool
+import tweepy
 
 DEBUG = True
 USER_FILE = 'users.json'
-TOTAL_REQUIRED_USERS = 100000
+TOTAL_REQUIRED_USERS = 50
 
 
 class UserCrawler:
@@ -13,21 +14,29 @@ class UserCrawler:
         self.num_tweets_to_crawl = tweets_to_crawl_per_user
         self.hashtags = [
             'eatingdisorder',
+            'eatingdisorderrecovery',
             'eatingdisorders',
             'edproblems',
             'edrecovery',
             'edlogic',
             'anorexia',
+            'edwarrior',
             'thinspo',
             'anarecovery',
         ]
+        self.api_id_pool = TwitterAPIPool('users', '/users/show/:id')
+        self.api_followers_pool = TwitterAPIPool('followers', '/followers/ids')
+        self.api_friends_pool = TwitterAPIPool('friends', '/friends/ids')
 
         # Recovery keywords
         self.recovery_keywords = [
-            'recovery',
-            'recovered',
-            'survivor',
-            'advocate'
+            'recovering from anorexia',
+            'recovering anorexic',
+            'recovery for anorexia',
+            'recovery from anorexia',
+            'suffering from anorexia',
+            'battling anorexia',
+
         ]
         self.users = {'user_ids': set(), 'crawled': set(), 'total_users': 0}
 
@@ -51,6 +60,7 @@ class UserCrawler:
         flattened_tweets = []
         for counter, user in enumerate(self.users):
             screen_name = user['screen_name']
+
             tweets = api.get_user_timeline(
                 screen_name=screen_name, count=self.num_tweets_to_crawl, tweet_mode="extended")
 
@@ -73,6 +83,10 @@ class UserCrawler:
             json.dump(flattened_tweets, f)
 
     def filter_users_by_keywords(self, user):
+        try :
+            api = self.api_id_pool.get_api()
+        except:
+            return False
         if (type(user) is int):
             try:
                 user = api.get_user(user)
@@ -134,10 +148,13 @@ class UserCrawler:
                     return
                 if (user_id in users['crawled']):
                     continue
-
-                followers_ids = api.followers_ids(id=user_id)
-                following_ids = api.friends_ids(id=user_id)
-
+                try :
+                    followers_ids = self.api_followers_pool.get_api().followers_ids(id=user_id)
+                    following_ids = self.api_friends_pool.get_api().friends_ids(id=user_id)
+                except tweepy.error.TweepError:
+                    print('Ignoring user id ', user_id)
+                    users['crawled'].add(user_id)
+                    continue
                 followers_count = len(followers_ids)
                 following_count = len(following_ids)
 
@@ -145,9 +162,9 @@ class UserCrawler:
                       followers_count, 'Following :', following_count)
                 print('Before filtering followers : ', len(followers_ids))
                 followers = set(
-                    filter(self.filter_users_by_keywords, followers_ids))
+                    filter(self.filter_users_by_keywords, followers_ids ))
                 following = set(
-                    filter(self.filter_users_by_keywords, following_ids))
+                    filter(self.filter_users_by_keywords, following_ids ))
                 print('After filtering followers : ', len(followers))
                 followers.update(following)
                 users['crawled'].add(user_id)
@@ -157,9 +174,4 @@ class UserCrawler:
                 print('no more change in set')
                 break
             copy_set = users['user_ids'].copy()
-            # Filter out the followers and following
-            # followers = list(filter(self.filter_users_by_keywords, followers))
-            # following = list(filter(self.filter_users_by_keywords, following))
-
-            # print("filtered out {} followers", followers_count - len(followers))
-            # print("filtered out {} friends", following_count - len(following))
+        return users
