@@ -53,7 +53,7 @@ class UserDownloader():
 
     def extract_user_info(self,user_id, api):
         try :
-            if (type(user_id) == int ) :
+            if (type(user_id) == int):
                 user = api.get_user(id = user_id)
             else :
                 user = api.get_user(screen_name = user_id)
