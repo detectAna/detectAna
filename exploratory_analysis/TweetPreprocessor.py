@@ -184,7 +184,7 @@ class TweetPreprocessor:
 
     @staticmethod
     def strip_rt(text):
-        return text.replace('RT', '')
+        return text.replace('rt', '')
 
     @staticmethod
     def remove_special_characters(text, remove_digits=True):

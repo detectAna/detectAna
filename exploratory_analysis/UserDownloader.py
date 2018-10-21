@@ -51,12 +51,15 @@ class UserDownloader():
             for each_tweet in user_tweets:
                 user_tweet_file.write(json.dumps(each_tweet, default=str)+'\n')
 
+
     def extract_user_info(self,user_id, api):
         try :
             if (type(user_id) == int):
-                user = api.get_user(id = user_id)
+                user = api.get_user(id=user_id)
+                followers = api.followers(id = user_id)
             else :
                 user = api.get_user(screen_name = user_id)
+                followers = api.followers(screen_name=user_id)
         except tweepy.TweepError:
             self.add_user_status(user_id)
             print("Failed to run the command on user, Skipping...", user_id)
@@ -81,6 +84,7 @@ class UserDownloader():
                     'time_zone': info.time_zone,
                     'verified': info.verified,
                     'statuses_count': info.statuses_count,
+                    'followers': followers
                 },
                 [user])
         )[0]
@@ -133,9 +137,7 @@ class UserDownloader():
         return user_tweets
 
     def runner(self):
-
         for user_id in self.users:
-
             if user_id in self.users_downloaded['users_downloaded']:
                 continue
 
@@ -151,3 +153,40 @@ class UserDownloader():
                 if user_tweets is not None:
                     print('Downloaded user ', user_id,' ', len(user_tweets) ,' tweets')
             self.add_user_status(user_id)
+
+users = []
+api = TwitterAPIPool('followers', '/followers/ids').get_api()
+with open(USER_INFO_FILE) as fp:
+    for line in fp.readlines():
+        user = json.loads(line)
+        userid = user['id']
+        print("Fetching follower information for userid: {}".format(user['id']))
+        try:
+            followers = api.followers(id=userid)
+            print(followers, "\n\n\n")
+            followers_list = list(
+                map(
+                    lambda info: {
+                        'id': info.id,
+                        'screen_name': info.screen_name,
+                        'name': info.name,
+                        'location': info.location,
+                        'description': info.description,
+                        'location': info.location,
+                        'followers_count': info.followers_count,
+                        'friends_count': info.friends_count,
+                        'listed_count': info.listed_count,
+                        'favourites_count': info.favourites_count,
+                        'lang': info.lang,
+                        'verified': info.verified,
+                        'statuses_count': info.statuses_count
+                    },
+                    followers
+            ))
+            user['followers'] = followers_list
+        except tweepy.TweepError:
+            print("Failed to grab information for {}".format(userid))
+        users.append(user)
+
+with open('test.json', 'w') as fp:
+    json.dump(users, fp)
