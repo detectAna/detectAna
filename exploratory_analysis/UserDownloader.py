@@ -155,16 +155,18 @@ class UserDownloader():
             self.add_user_status(user_id)
 
 users = []
-api = TwitterAPIPool('followers', '/followers/ids').get_api()
+api = TwitterAPIPool('friends', '/friends/list').get_api()
 with open(USER_INFO_FILE) as fp:
     for line in fp.readlines():
         user = json.loads(line)
         userid = user['id']
         print("Fetching follower information for userid: {}".format(user['id']))
         try:
-            followers = api.followers(id=userid)
-            print(followers, "\n\n\n")
-            followers_list = list(
+            friends = []
+            for friend in tweepy.Cursor(api.friends, id=userid, count=200).items():
+                friends.append(friend)
+            print("Scraped {} friends".format(len(friends)))
+            friends_list = list(
                 map(
                     lambda info: {
                         'id': info.id,
@@ -181,9 +183,9 @@ with open(USER_INFO_FILE) as fp:
                         'verified': info.verified,
                         'statuses_count': info.statuses_count
                     },
-                    followers
+                    friends
             ))
-            user['followers'] = followers_list
+            user['followers'] = friends_list
         except tweepy.TweepError:
             print("Failed to grab information for {}".format(userid))
         users.append(user)
