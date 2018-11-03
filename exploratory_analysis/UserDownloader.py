@@ -110,9 +110,10 @@ class UserDownloader():
             alltweets.extend(new_tweets)
             # update the id of the oldest tweet less one
             oldest = alltweets[-1].id - 1
-        # print(alltweets[0])
+        print(alltweets[0])
         return list(map(
             lambda tweet: {'id': tweet.id,
+                           'created_at': tweet.created_at,
                            'text':  tweet.full_text,
                            'truncated': tweet.truncated,
                            'entities': tweet.entities,

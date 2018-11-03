@@ -5,7 +5,7 @@ import tweepy
 
 DEBUG = True
 USER_FILE = 'users.json'
-TOTAL_REQUIRED_USERS = 50
+TOTAL_REQUIRED_USERS = 150
 
 
 class UserCrawler:
@@ -148,6 +148,10 @@ class UserCrawler:
                     return
                 if (user_id in users['crawled']):
                     continue
+                if (type(user_id) == int):
+                    user = self.api_id_pool.get_api().get_user(user_id)
+                    user_id = user.id
+
                 try :
                     followers_ids = self.api_followers_pool.get_api().followers_ids(id=user_id)
                     following_ids = self.api_friends_pool.get_api().friends_ids(id=user_id)
