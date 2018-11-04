@@ -192,3 +192,4 @@ with open(USER_INFO_FILE) as fp:
 
 with open('test.json', 'w') as fp:
     json.dump(users, fp)
+
