@@ -190,6 +190,6 @@ with open(USER_INFO_FILE) as fp:
             print("Failed to grab information for {}".format(userid))
         users.append(user)
 
-with open('test.json', 'w') as fp:
+with open('friends.json', 'w') as fp:
     json.dump(users, fp)
 
