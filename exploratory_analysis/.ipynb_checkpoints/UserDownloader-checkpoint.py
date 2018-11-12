@@ -185,11 +185,11 @@ with open(USER_INFO_FILE) as fp:
                     },
                     friends
             ))
-            user['followers'] = friends_list
+            user['friends'] = friends_list
         except tweepy.TweepError:
             print("Failed to grab information for {}".format(userid))
         users.append(user)
 
-with open('friends.json', 'w') as fp:
+with open('user_metadata_latest_with_friends.json', 'w') as fp:
     json.dump(users, fp)
 
