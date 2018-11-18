@@ -14,22 +14,7 @@ from timeit import default_timer as timer
 TWEETS_FILE = 'user_tweets.jsonl'
 DEBUG = True
 #Building features from raw data
-with gzip.open(‘gamergate.json.gz’,‘rb’) as f:
-   count = 0
-   for line in f:
-       status = json.loads(line)
-       #pprint.pprint(status)
-       raw_series = pd.Series({‘followers_count’:status[‘user’][‘followers_count’], ‘listed_count’:status[‘user’][‘listed_count’], \
-                        ‘statuses_count’:status[‘user’][‘statuses_count’],‘friends_count’:status[‘user’][‘friends_count’],\
-                       ‘favourites_count’:status[‘user’][‘favourites_count’],‘text’:status[‘text’].encode(‘utf-8’),‘retweet_count’:status[‘retweet_count’],‘user_name’:status[‘user’][‘name’]})
-       raw_features = pd.DataFrame([raw_series],index =[count])
-       if count == 0:
-           raw_features.to_csv(‘features.csv’)
-       if count > 0:
-           raw_features.to_csv(‘features.csv’, mode=‘a’, header=False)
-       count += 1
-       if count % 10000 == 0:
-           print(count)
+
 
 
 class TweetAnalyzer:
