@@ -186,6 +186,8 @@ with open(USER_INFO_FILE) as fp:
                     friends
             ))
             user['friends'] = friends_list
+            with open('user_metadata_latest_with_friends_v2.jsonl', 'a') as fp:
+                fp.write(json.dumps(user, default=str) + '\n')
         except tweepy.TweepError:
             print("Failed to grab information for {}".format(userid))
         users.append(user)
