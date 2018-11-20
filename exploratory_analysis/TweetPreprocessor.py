@@ -8,10 +8,12 @@ from gensim.utils import simple_preprocess
 from gensim.parsing.preprocessing import STOPWORDS
 from nltk.stem import WordNetLemmatizer, SnowballStemmer
 from nltk.stem.porter import *
+import html
 import numpy as np
 np.random.seed(2018)
 import nltk
 nltk.download('wordnet')
+
 
 cList = {
   "ain't": "am not",
@@ -159,7 +161,7 @@ class TweetPreprocessor:
         entity_prefixes = ['@']
         for separator in string.punctuation:
             if separator not in entity_prefixes:
-                text = text.replace(separator, ' ')
+                text = text.replace(separator, '')
         words = []
         for word in text.split():
             word = word.strip()
@@ -173,7 +175,7 @@ class TweetPreprocessor:
         entity_prefixes = ['#']
         for separator in string.punctuation:
             if separator not in entity_prefixes:
-                text = text.replace(separator, ' ')
+                text = text.replace(separator, '')
         words = []
         for word in text.split():
             word = word.strip()
@@ -184,7 +186,7 @@ class TweetPreprocessor:
 
     @staticmethod
     def strip_rt(text):
-        return text.replace('RT', '')
+        return text.replace('rt', '')
 
     @staticmethod
     def remove_special_characters(text, remove_digits=True):
@@ -210,15 +212,20 @@ class TweetPreprocessor:
         result = []
         for token in gensim.utils.simple_preprocess(text):
             if token not in gensim.parsing.preprocessing.STOPWORDS and len(token) > 3:
-                result.append(lemmatize_stemming_helper(token))
+                result.append(TweetPreprocessor.lemmatize_stemming_helper(token))
         return result
 
     @staticmethod
+    def unescape(text):
+        return html.unescape(text)
+    
+    @staticmethod
     def pipeline(text):
         text = TweetPreprocessor.strip_links(text)
+        text = TweetPreprocessor.unescape(text)
         text = TweetPreprocessor.expandContractions(text)
         text = TweetPreprocessor.strip_mentions(text)
         text = TweetPreprocessor.strip_hashtags(text)
         text = TweetPreprocessor.strip_rt(text)
         text = TweetPreprocessor.remove_digits(text)
-        return text
+        return text.strip()

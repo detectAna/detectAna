@@ -17,6 +17,7 @@ nltk = "*"
 gensim = "*"
 vadersentiment = "*"
 bokeh = "*"
+wordcloud = "*"
 
 [requires]
 python_version = "3.6"
